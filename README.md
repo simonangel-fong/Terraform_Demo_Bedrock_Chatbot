@@ -1,4 +1,4 @@
-# Terraform Template: AI Chatbot
+# Terraform Demo: AI Chatbot
 
 An `Infrastructure as Code (IaC)` solution to build an AI chatbot using Terraform.
 
