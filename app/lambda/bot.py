@@ -2,8 +2,7 @@ import boto3
 import json
 
 # model id
-# MODEL_ID = "us.amazon.nova-2-lite-v1:0"
-MODEL_ID = "anthropic.claude-sonnet-4-6"
+MODEL_ID = "us.amazon.nova-2-lite-v1:0"
 
 # bedrock client
 client = boto3.client(
@@ -13,7 +12,7 @@ client = boto3.client(
 
 system_list = [
     {
-        "text": "You are a Bedrock AI asis."
+        "text": "You are a Bedrock AI assistant."
     }
 ]
 
