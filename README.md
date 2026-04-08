@@ -1,4 +1,4 @@
-# Terraform Demo: AI Chatbot
+# Terraform Demo: AI Chatbot (Stateless)
 
 An `Terraform` demo to build an AI chatbot.
 
