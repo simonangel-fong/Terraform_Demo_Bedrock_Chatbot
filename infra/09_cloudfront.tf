@@ -3,12 +3,13 @@
 # ###############################
 
 locals {
-  s3_origin_id  = "cloudfront-s3-${aws_s3_bucket.web_host_bucket.bucket}"
-  api_origin_id = "cloudfront-api-${aws_api_gateway_rest_api.rest_api.id}"
+  s3_origin_id  = "s3-${aws_s3_bucket.web_host_bucket.bucket}"
+  api_origin_id = "api-${aws_api_gateway_rest_api.app.id}"
+  dns_record    = "${var.dns_subdomain}.${var.dns_domain}"
 }
 
 # cloudfront
-resource "aws_cloudfront_distribution" "cf_distribution" {
+resource "aws_cloudfront_distribution" "app" {
 
   # S3 Website Origin
   origin {
@@ -26,7 +27,7 @@ resource "aws_cloudfront_distribution" "cf_distribution" {
   # API Gateway Origin
   origin {
     origin_id   = local.api_origin_id
-    domain_name = "${aws_api_gateway_rest_api.rest_api.id}.execute-api.${var.aws_region}.amazonaws.com"
+    domain_name = "${aws_api_gateway_rest_api.app.id}.execute-api.${var.aws_region}.amazonaws.com"
     origin_path = ""
 
     custom_origin_config {
@@ -39,8 +40,8 @@ resource "aws_cloudfront_distribution" "cf_distribution" {
 
   # Default cache behavior: S3 website
   default_cache_behavior {
-    allowed_methods  = ["GET", "HEAD"]
-    cached_methods   = ["GET", "HEAD"]
+    allowed_methods  = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+    cached_methods   = ["HEAD", "GET", "OPTIONS"]
     target_origin_id = local.s3_origin_id
 
     viewer_protocol_policy = "redirect-to-https"
@@ -64,43 +65,37 @@ resource "aws_cloudfront_distribution" "cf_distribution" {
     }
   }
 
-  # Cache behavior：API Gateway
+  # ordered cache
   ordered_cache_behavior {
-    path_pattern           = "/${aws_api_gateway_stage.api_stage.stage_name}/*"
+    path_pattern           = "/${var.env}/*"
     target_origin_id       = local.api_origin_id
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
     cached_methods         = ["GET", "HEAD", "OPTIONS"]
     compress               = true
-    viewer_protocol_policy = "redirect-to-https"
 
     forwarded_values {
       query_string = true
-
-      # header
       headers = [
+        "Access-Control-Request-Headers",
+        "Access-Control-Request-Method",
+        "Origin",
         "Authorization",
         "Content-Type"
       ]
-
-      cookies {
-        forward = "none"
-      }
+      cookies { forward = "none" }
     }
-
-    default_ttl = 0
-    max_ttl     = 0
-    min_ttl     = 0
   }
 
   enabled             = true
   default_root_object = "index.html"
 
-  aliases = ["${var.app_subdomain_web}.${var.app_domain}"]
+  aliases = ["${local.dns_record}"]
 
   price_class = "PriceClass_100" # Use only North America and Europe
 
   viewer_certificate {
-    acm_certificate_arn      = var.aws_cert_arn
+    acm_certificate_arn      = data.aws_acm_certificate.cert.arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
   }
@@ -128,12 +123,6 @@ resource "aws_cloudfront_distribution" "cf_distribution" {
 
   depends_on = [
     aws_s3_bucket.web_host_bucket,
-    aws_api_gateway_deployment.rest_api_deployment
+    aws_api_gateway_deployment.app
   ]
-
-  tags = {
-    Name        = "${var.app_name}-cloudfront"
-    Project     = var.app_name
-    Environment = "prod"
-  }
 }

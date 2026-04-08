@@ -3,23 +3,17 @@
 # ########################################
 
 resource "aws_s3_bucket" "web_host_bucket" {
-  bucket = local.app_web_address
-
-  tags = {
-    Name        = "${var.app_name}-s3-bucket"
-    Project     = var.app_name
-    Environment = "prod"
-  }
+  bucket = "${var.app_name}-${random_string.bucket_suffix.result}"
 }
 
-# resource "random_string" "bucket_suffix" {
-#   length  = 8
-#   special = false
-#   upper   = false
-# }
+resource "random_string" "bucket_suffix" {
+  length  = 4
+  special = false
+  upper   = false
+}
 
 # Enabe bucket versioning
-resource "aws_s3_bucket_versioning" "bucket_versioning" {
+resource "aws_s3_bucket_versioning" "chatbot" {
   bucket = aws_s3_bucket.web_host_bucket.id
 
   versioning_configuration {
@@ -30,11 +24,10 @@ resource "aws_s3_bucket_versioning" "bucket_versioning" {
 # ########################################
 # Upload web files
 # ########################################
-
 module "template_files" {
   source = "hashicorp/dir/template"
 
-  base_dir = "${path.module}/../web"
+  base_dir = "${path.module}/${var.web_dir}"
 }
 
 # update S3 object resource for hosting bucket files
@@ -56,7 +49,6 @@ resource "aws_s3_object" "web_file" {
 # ########################################
 # Enable static website hosting
 # ########################################
-
 resource "aws_s3_bucket_website_configuration" "website_config" {
   bucket = aws_s3_bucket.web_host_bucket.id
 
@@ -72,13 +64,10 @@ resource "aws_s3_bucket_website_configuration" "website_config" {
 # ########################################
 # Configure bucket permission
 # ########################################
-
 # Enable bucket public access block
 resource "aws_s3_bucket_public_access_block" "bucket_public_access" {
   bucket = aws_s3_bucket.web_host_bucket.id
 
-  # block_public_acls       = true
-  # ignore_public_acls      = true
   block_public_acls       = false
   ignore_public_acls      = false
   block_public_policy     = false
@@ -105,7 +94,7 @@ resource "aws_s3_bucket_acl" "bucket_acl" {
 }
 
 # Enable bucket policy for public read access
-resource "aws_s3_bucket_policy" "example" {
+resource "aws_s3_bucket_policy" "website_public_read" {
   bucket = aws_s3_bucket.web_host_bucket.id
 
   policy = jsonencode({

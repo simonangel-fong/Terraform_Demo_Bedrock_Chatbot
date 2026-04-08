@@ -1,15 +1,11 @@
 # Terraform Demo: AI Chatbot
 
-An `Infrastructure as Code (IaC)` solution to build an AI chatbot using Terraform.
+An `Terraform` demo to build an AI chatbot.
 
 - Diagram
 
-![pic](./chatbot_diagram.gif)
+![pic](./docs/assets/chatbot_diagram.gif)
 
 - Deployment
 
-![pic](./chatbot.png)
-
-```sh
-terraform init -backend-config=state.config --reconfigure
-```
+![pic](./docs/assets/chatbot.png)

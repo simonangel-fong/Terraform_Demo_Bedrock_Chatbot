@@ -1,0 +1,70 @@
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Base ── */
+html, body {
+  height: 100%;
+  background: #0e0f11;
+  font-family: 'DM Sans', sans-serif;
+  color: #e8e6e0;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar       { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2d35; border-radius: 4px; }
+
+/* ── Textarea ── */
+textarea {
+  resize: none;
+  font-family: inherit;
+}
+textarea:focus { outline: none; }
+
+/* ── Input box focus ring ── */
+#input-box:focus-within {
+  border-color: rgba(200, 169, 110, 0.4);
+}
+
+/* ── Message entrance animation ── */
+.msg-appear {
+  animation: fadein 0.25s ease-out forwards;
+}
+
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Typing cursor ── */
+.cursor-blink::after {
+  content: '▋';
+  animation: blink 1s step-end infinite;
+  margin-left: 1px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Error state on bot bubble ── */
+.bubble-error {
+  border-color: rgba(226, 75, 74, 0.4) !important;
+  color: #f09595;
+}
+
+/* ── Disabled send button ── */
+#send-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Sidebar transition ── */
+#sidebar {
+  transition: width 0.3s ease, border-width 0.3s ease;
+}

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bedrock Chatbot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['DM Sans', 'sans-serif'],
+            mono: ['DM Mono', 'monospace'],
+          },
+          colors: {
+            bg: { DEFAULT: '#0e0f11', surface: '#16181c', raised: '#1e2026', border: '#2a2d35' },
+            accent: { DEFAULT: '#c8a96e', muted: '#a88a52', dim: '#3a2e1e' },
+            text: { primary: '#e8e6e0', secondary: '#8a8782', muted: '#4e4d4a' },
+          },
+          keyframes: {
+            fadein: { from: { opacity: 0, transform: 'translateY(6px)' }, to: { opacity: 1, transform: 'none' } },
+            blink: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0 } },
+          },
+          animation: {
+            fadein: 'fadein 0.25s ease-out forwards',
+            blink: 'blink 1s step-end infinite',
+          },
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="flex h-screen overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside id="sidebar"
+    class="flex flex-col w-60 shrink-0 border-r border-bg-border bg-bg-surface transition-all duration-300 overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-4 border-b border-bg-border">
+      <span class="text-xs font-mono font-medium tracking-widest text-text-secondary uppercase">Bedrock Chatbot</span>
+      <button id="close-sidebar-btn" class="text-text-muted hover:text-text-secondary transition-colors"
+        title="Close sidebar">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-3 py-3">
+      <p class="text-xs text-text-muted text-center mt-8 leading-relaxed">No conversations yet.<br />Start a chat to see
+        history.</p>
+    </div>
+    <div class="px-4 py-4 border-t border-bg-border">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-full bg-accent-dim flex items-center justify-center">
+          <span class="text-accent text-xs font-medium">U</span>
+        </div>
+        <span class="text-sm text-text-secondary">User</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="flex flex-col flex-1 min-w-0">
+
+    <!-- Header -->
+    <header class="flex items-center gap-3 px-5 py-3.5 border-b border-bg-border bg-bg-surface shrink-0">
+      <button id="open-sidebar-btn" class="hidden text-text-muted hover:text-text-secondary transition-colors mr-1"
+        title="Open sidebar">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </button>
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded bg-accent-dim flex items-center justify-center">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="6" r="4" stroke="#c8a96e" stroke-width="1.5" />
+            <circle cx="6" cy="6" r="1.5" fill="#c8a96e" />
+          </svg>
+        </div>
+        <span class="font-medium tracking-tight text-text-primary text-sm">Lumen</span>
+      </div>
+      <div class="ml-auto flex items-center gap-3">
+        <span class="text-xs font-mono text-text-muted">v0.1</span>
+        <div class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></div>
+      </div>
+    </header>
+
+    <!-- Chat history -->
+    <main id="chat" class="flex-1 overflow-y-auto px-4 py-6">
+
+      <!-- Welcome state -->
+      <div id="welcome" class="flex flex-col items-center justify-center h-full text-center gap-3 pb-16 opacity-60">
+        <div class="w-10 h-10 rounded-full bg-bg-raised border border-bg-border flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="9" cy="9" r="6" stroke="#c8a96e" stroke-width="1.2" />
+            <circle cx="9" cy="9" r="2" fill="#c8a96e" />
+          </svg>
+        </div>
+        <p class="text-sm text-text-secondary">How can I help you today?</p>
+      </div>
+
+      <!-- Messages injected here -->
+      <div id="messages" class="flex flex-col gap-5"></div>
+    </main>
+
+    <!-- Input area -->
+    <footer class="px-4 pb-5 pt-3 shrink-0">
+      <div class="max-w-2xl mx-auto">
+        <div id="input-box"
+          class="flex items-end gap-3 bg-bg-raised border border-bg-border rounded-xl px-4 py-3 transition-colors">
+          <textarea id="input" rows="1" placeholder="Send a message…"
+            class="flex-1 bg-transparent text-text-primary text-sm placeholder:text-text-muted leading-relaxed max-h-36 overflow-y-auto"></textarea>
+          <button id="send-btn"
+            class="shrink-0 w-8 h-8 rounded-lg bg-accent flex items-center justify-center hover:bg-accent-muted transition-colors disabled:opacity-30"
+            title="Send">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 12V2M7 2L3 6M7 2L11 6" stroke="#0e0f11" stroke-width="1.6" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+        <p class="text-center text-xs text-text-muted mt-2">
+          Press <kbd class="font-mono">Enter</kbd> to send · <kbd class="font-mono">Shift+Enter</kbd> for new line
+        </p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+
+</html>

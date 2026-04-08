@@ -1,3 +1,4 @@
+# version.tf
 terraform {
   # declare provider and version
   required_providers {
@@ -17,14 +18,4 @@ terraform {
     region = ""
     key    = ""
   }
-}
-
-# Configure the AWS Provider
-provider "aws" {
-  region = var.aws_region
-}
-
-# Configure the cloudflare Provider
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
 }
