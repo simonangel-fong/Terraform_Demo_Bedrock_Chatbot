@@ -1,0 +1,112 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_destroy:
+        description: "Type DESTROY to confirm infrastructure deletion"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-destroy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+
+    if: ${{ github.event.inputs.confirm_destroy == 'DESTROY' }}
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./infra
+
+    env:
+      TF_LOG: INFO
+      TF_IN_AUTOMATION: true
+
+      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+      TF_VAR_dns_domain: ${{ secrets.DNS_DOMAIN }}
+      TF_VAR_dns_subdomain: ${{ secrets.DNS_SUBDOMAIN }}
+      TF_VAR_acm_cert_arn: ${{ secrets.AWS_CERT_ARN }}
+      TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_cloudflare_zone_id: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials from GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v5.1.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: gha-terraform-destroy
+          unset-current-credentials: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.AWS_BACKEND_BUCKET }}" \
+            -backend-config="region=${{ secrets.AWS_REGION }}" \
+            -backend-config="key=${{ secrets.AWS_BACKEND_BUCKET_KEY }}" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Destroy Plan
+        run: terraform plan -destroy -input=false -no-color -out=destroy.tfplan
+
+      - name: Terraform Destroy
+        run: terraform apply -input=false -auto-approve destroy.tfplan
+
+      - name: Send email notification on success
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "⚠️ Notification: Chatbot App Infrastructure Destroyed"
+          to: ${{ secrets.EMAIL_USERNAME }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          html_body: |
+            <h2>Chatbot App Infrastructure Destroyed</h2>
+            <p>Application infrastructure was destroyed successfully.</p>
+            <p>Branch: <b>${{ github.ref_name }}</b></p>
+            <p>Workflow: <b>${{ github.workflow }}</b></p>
+            <p>Commit: <b>${{ github.sha }}</b></p>
+            <p><a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Workflow Run</a></p>
+
+      - name: Send email notification on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "❌ Notification: Chatbot App Infrastructure Destroy Failed"
+          to: ${{ secrets.EMAIL_USERNAME }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          html_body: |
+            <h2>Chatbot App Infrastructure Destroy Failed</h2>
+            <p>There was an error destroying infrastructure.</p>
+            <p>Branch: <b>${{ github.ref_name }}</b></p>
+            <p>Workflow: <b>${{ github.workflow }}</b></p>
+            <p>Commit: <b>${{ github.sha }}</b></p>
+            <p><a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Workflow Run</a></p>
