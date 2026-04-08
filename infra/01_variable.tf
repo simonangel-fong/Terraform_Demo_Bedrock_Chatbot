@@ -5,7 +5,7 @@
 variable "app_name" {
   description = "Application name"
   type        = string
-  default     = "bedrock-log-analyst"
+  default     = "bedrock-chatbot"
 }
 
 variable "env" {

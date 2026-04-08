@@ -6,6 +6,6 @@ An `Terraform` demo to build an AI chatbot.
 
 ![pic](./docs/assets/chatbot_diagram.gif)
 
-- Deployment
+- Demo
 
 ![pic](./docs/assets/chatbot.png)

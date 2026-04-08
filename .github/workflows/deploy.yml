@@ -1,60 +1,62 @@
-name: "Terraform Deploy"
+name: Terraform Deploy
 
 on:
   push:
-    branches: [master]
+    branches:
+      - master
     paths:
-      - terraform/**
-      - web/**
-      - lambda/**
+      - infra/**
+      - app/web/**
+      - app/lambda/**
   workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
     name: Terraform Deploy
     runs-on: ubuntu-latest
+
     defaults:
       run:
         shell: bash
-        # Specify pwd
-        working-directory: ./terraform
+        working-directory: ./infra
 
     env:
       TF_LOG: INFO
-      # terraform backend
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_BACKEND_BUCKET: ${{ secrets.AWS_BACKEND_BUCKET }}
-      AWS_BACKEND_BUCKET_KEY: ${{ secrets.AWS_BACKEND_BUCKET_KEY }}
-      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+      TF_IN_AUTOMATION: true
 
-      TF_VAR_app_domain: ${{ secrets.APP_DOMAIN }}
+      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+      TF_VAR_dns_domain: ${{ secrets.DNS_DOMAIN }}
+      TF_VAR_dns_subdomain: ${{ secrets.DNS_SUBDOMAIN }}
       TF_VAR_aws_cert_arn: ${{ secrets.AWS_CERT_ARN }}
       TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       TF_VAR_cloudflare_zone_id: ${{ secrets.CLOUDFLARE_ZONE_ID }}
 
     steps:
-      - name: Checkout the repository to the runner
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Read Terraform Action
-        id: action
-        run: |
-          # pwd
-          # ls -al
-          if [ -f "./terraform.ini" ]; then
-            ACTION=$(cat ./terraform.ini | tr -d '\n\r')
-            echo "action=$ACTION" >> $GITHUB_OUTPUT
-          else
-            echo "action=plan" >> $GITHUB_OUTPUT
-          fi
+      - name: Configure AWS credentials from GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v5.1.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: gha-terraform-deploy
+          unset-current-credentials: true
 
-      - name: Setup Terraform with specified version on the runner
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
 
-      - name: Terraform Init with backend S3 bucket
+      - name: Terraform Init
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.AWS_BACKEND_BUCKET }}" \
@@ -62,41 +64,24 @@ jobs:
             -backend-config="key=${{ secrets.AWS_BACKEND_BUCKET_KEY }}" \
             -backend-config="encrypt=true"
 
-      - name: Terraform format
-        id: fmt
-        run: terraform fmt -check
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
 
-      - name: Terraform validate
-        id: validate
+      - name: Terraform Validate
         run: terraform validate
 
-      - name: Terraform plan
-        id: plan
-        run: terraform plan -no-color
-        # continue-on-error: true
+      - name: Terraform Plan
+        run: terraform plan -input=false -no-color -out=tfplan
 
       - name: Terraform Apply
-        if: |
-          github.ref == 'refs/heads/master' &&
-          github.event_name == 'push' &&
-          steps.action.outputs.action == 'apply'
-        run: terraform apply -auto-approve
+        run: terraform apply -input=false -auto-approve tfplan
 
-      - name: Terraform Destroy
-        if: |
-          github.ref == 'refs/heads/master' &&
-          github.event_name == 'push' &&
-          steps.action.outputs.action == 'destroy'
-        run: terraform destroy -auto-approve
-
-        # notify
       - name: Send email notification on success
         if: success()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 587
-          # secure: true
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "✅ Notification: Chatbot App Updated Completed"
@@ -104,8 +89,8 @@ jobs:
           from: ${{ secrets.EMAIL_USERNAME }}
           html_body: |
             <h2>Chatbot App Updated Completed</h2>
-            <p>Application infractructures updated successfully.</p>
-            <p>Branch: <b>master</b></p>
+            <p>Application infrastructures updated successfully.</p>
+            <p>Branch: <b>${{ github.ref_name }}</b></p>
             <p>Workflow: <b>${{ github.workflow }}</b></p>
             <p>Commit: <b>${{ github.sha }}</b></p>
             <p><a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Workflow Run</a></p>
@@ -116,16 +101,15 @@ jobs:
         with:
           server_address: smtp.gmail.com
           server_port: 587
-          # secure: true
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "❌ Notification: Chatbot App Updated Failed."
+          subject: "❌ Notification: Chatbot App Updated Failed"
           to: ${{ secrets.EMAIL_USERNAME }}
           from: ${{ secrets.EMAIL_USERNAME }}
           html_body: |
             <h2>Chatbot App Updated Failed</h2>
             <p>There was an error updating infrastructure.</p>
-            <p>Branch: <b>master</b></p>
+            <p>Branch: <b>${{ github.ref_name }}</b></p>
             <p>Workflow: <b>${{ github.workflow }}</b></p>
             <p>Commit: <b>${{ github.sha }}</b></p>
             <p><a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Workflow Run</a></p>

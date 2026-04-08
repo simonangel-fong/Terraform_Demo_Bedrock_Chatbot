@@ -1,5 +1,6 @@
 ```sh
 terraform -chdir=infra init --backend-config=state.config -reconfigure
+terraform -chdir=infra init --backend-config=state.config -migrate-state
 terraform -chdir=infra fmt && terraform -chdir=infra validate
 terraform -chdir=infra apply -auto-approve
 ```
@@ -12,52 +13,10 @@ pip install boto3
 
 ```
 
-## ToDo
+```txt
+who are you?
 
-- [x] lambda
-- [x] bedrock
-- [x] api
-- [x] web
-- [ ] cognito
+what is the sum of 1 + 1?
 
-```json
-{
-  "prompt": "Is this country in Asia?",
-  "history": [
-    {
-      "role": "user",
-      "content": "what is the capital of Japan?",
-      "timestamp": 1712345678901
-    },
-    {
-      "role": "assistant",
-      "content": "The capital of Japan is Tokyo.",
-      "timestamp": 1712345679900
-    }
-  ]
-}
-```
-
-```json
-{
-  "prompt": "Make sure the songs are by artists from the United Kingdom.",
-  "history": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "text": "Create a list of 3 pop songs."
-        }
-      ]
-    },
-    {
-      "role": "assistant",
-      "content": [
-        {
-          "text": "Here is a list of 3 pop songs by artists from the United Kingdom:\n\n1. \"As It Was\" by Harry Styles\n2. \"Easy On Me\" by Adele\n3. \"Unholy\" by Sam Smith and Kim Petras"
-        }
-      ]
-    }
-  ]
-}
+What is AWS Lambda in one sentence?
 ```
