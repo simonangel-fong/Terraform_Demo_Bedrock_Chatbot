@@ -10,22 +10,27 @@ client = boto3.client(
     region_name="us-east-1"
 )
 
+system_list = [
+    {
+        "text": "You are a Bedrock AI asis."
+    }
+]
+
+inf_params = {"maxTokens": 500, "topP": 0.9, "topK": 20, "temperature": 0.7}
+
 
 def lambda_handler(event, context):
     try:
         body = json.loads(event.get("body") or "{}")
-
         prompt = body.get("prompt", "").strip()
 
+        message_list = [{"role": "user", "content": [{"text": prompt}]}]
+
         request_body = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {"text": prompt}
-                    ]
-                }
-            ]
+            "schemaVersion": "messages-v1",
+            "messages": message_list,
+            "system": system_list,
+            "inferenceConfig": inf_params,
         }
 
         response = client.invoke_model(
